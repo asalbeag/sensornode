@@ -39,7 +39,9 @@ int main(void)
     RCC_Config();
     GPIO_Config();
     SPI_Config();
+    I2C_Config();
 
+    sensor_init();
 
     // setup RFM69 and optional reset
     RFM69_Struct rfm69;
@@ -61,46 +63,33 @@ int main(void)
 
 
     // check if a packet has been received
-    char rx[64];
+    char testdata[7] = {1, 1, 0, 0, 0};
+    uint16_t temperature;
+    uint16_t humidity;
 
-    int bytesReceived = RFM69_receive(&rfm69, rx, sizeof(rx));
-/*
-    for (;;)
-    {
-        // set led on
-		GPIO_SetBits(GPIOA, GPIO_Pin_1);
-
-        // receive a packet
-        RFM69_receive(&rfm69, rx, 64);
-
-		// delay
-		simple_delay(500000);
-
-		// clear led
-		GPIO_ResetBits(GPIOA, GPIO_Pin_1);
-
-		// delay
-		simple_delay(500000);
-    }
-*/
-
-    char testdata[4] = {1, 1, 0, 0x55};
 	for (;;)
     {
 		// set led on
 		GPIO_SetBits(GPIOA, GPIO_Pin_1);
+        read_sensor(&temperature, &humidity);
 
-        // send a packet and let RF module sleep
+        //Pack the sensor reading into the RF packet
+        testdata[4] = temperature>>8;
+        testdata[5] = temperature && 0xFF;
+        testdata[6] = humidity>>8;
+        testdata[7] = humidity && 0xFF;
 
+        //Send a packet
         RFM69_send(&rfm69, testdata, sizeof(testdata));
 
-        RFM69_setMode(&rfm69, RFM69_MODE_RX);
+        //Put the RF module to sleep
+        //RFM69_sleep(&rfm69);
+
         // delay
 		simple_delay(100000);
 
-        bytesReceived = RFM69_receive(&rfm69, rx, sizeof(rx));
-        //RFM69_sleep(&rfm69);
-
+        //RFM69_setMode(&rfm69, RFM69_MODE_RX);
+        //bytesReceived = RFM69_receive(&rfm69, rx, sizeof(rx));
 
 		// clear led
 		GPIO_ResetBits(GPIOA, GPIO_Pin_1);
@@ -109,29 +98,6 @@ int main(void)
 		simple_delay(100000);
 
 	}
-	/*
-    char testdata[5] = {1, 2, 0x40, 'l', 'o'};
-	for (;;)
-    {
-		// set led on
-		GPIO_SetBits(GPIOA, GPIO_Pin_1);
-
-        // send a packet and let RF module sleep
-
-        RFM69_send(&rfm69, testdata, sizeof(testdata));
-        RFM69_sleep(&rfm69);
-
-		// delay
-		simple_delay(1000000);
-
-		// clear led
-		GPIO_ResetBits(GPIOA, GPIO_Pin_1);
-
-		// delay
-		simple_delay(1000000);
-
-	}
-    */
 	//Read temperature sensor
 	//Send Data
 	//Sleep, wake up only for button interrupt or accelerometer interrupt
@@ -153,6 +119,8 @@ void GPIO_Config(void)
     RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA, ENABLE);
 
 
+    //****************************************
+    //****************************************
     // gpio init struct
 	GPIO_InitTypeDef GPIO_Init_LED;
 
@@ -170,8 +138,9 @@ void GPIO_Config(void)
 
 	// apply configuration
 	GPIO_Init(LED_GPIO, &GPIO_Init_LED);
-
-
+/*
+    //****************************************
+    //****************************************
     GPIO_InitTypeDef GPIO_Init_SPI;
 
     // Configure SPIz pins: SCK, MISO and MOSI ---------------------------------
@@ -186,6 +155,5 @@ void GPIO_Config(void)
     // Configure MISO pin as Input Floating
     GPIO_Init_SPI.GPIO_Mode = GPIO_Mode_IN;
     GPIO_Init(SPI_GPIO, &GPIO_Init_SPI);
-
+*/
 }
-

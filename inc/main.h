@@ -43,6 +43,7 @@ void GPIO_Config(void);
 void I2C_Config(void);
 uint16_t I2C_read_word(uint8_t address, uint8_t reg);
 uint8_t I2C_write_word(uint8_t address, uint8_t reg, uint16_t data);
+uint8_t I2C_select_register(uint8_t address, uint8_t reg);
 
 //spi.c
 void SPI_Config(void);
