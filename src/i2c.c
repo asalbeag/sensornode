@@ -28,7 +28,7 @@ void I2C_Config()
     //GPIO_PinAFConfig(I2C_GPIO, I2C_SDA_PIN, GPIO_AF_4);
     //GPIO_PinAFConfig(I2C_GPIO, I2C_SCL_PIN, GPIO_AF_4);
 
-    //Since the PinAFConfig function ^^^^^ doesn't seem to work, manually set PA9 and PA10 top Alternate Function 4
+    //Since the PinAFConfig function ^^^^^ doesn't seem to work, manually set PA9 and PA10 to Alternate Function 4
     I2C_GPIO->AFR[1] |= 0x0440;
 
     //*****************************
@@ -42,7 +42,8 @@ void I2C_Config()
     I2C_InitStructure.I2C_DigitalFilter = 0x00;
     I2C_InitStructure.I2C_Mode = I2C_Mode_I2C;
     I2C_InitStructure.I2C_OwnAddress1 = 0x00;
-    I2C_InitStructure.I2C_Timing = 0x00201D2B;
+    //I2C_InitStructure.I2C_Timing = 0x10420F13;              //8MHz clock
+    I2C_InitStructure.I2C_Timing = 0x00201D2B;            //48MHz clock
 
     //Initialise the peripheral
     I2C_Init(I2C_PERIPH, &I2C_InitStructure);

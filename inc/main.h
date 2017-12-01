@@ -7,6 +7,9 @@
 #ifndef MAIN_H_
 #define MAIN_H_
 
+//The STM32 factory-programmed UUID memory address location
+#define STM32_UUID ((uint32_t *)0x1FFFF7AC)
+
 #define SENSOR_ADDRESS          0x80        //7-bit address
 
 #define SPI_PERIPH              SPI1
@@ -38,6 +41,9 @@
 //main.c
 void RCC_Config(void);
 void GPIO_Config(void);
+void RTC_Config(void);
+void RTC_AlarmConfig(void);
+void StandbyRTCMode(void);
 
 //i2c.c
 void I2C_Config(void);
