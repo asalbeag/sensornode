@@ -46,29 +46,21 @@ int main(void)
 
     sensor_init();
 
-    GPIO_WriteBit(GPIOA, GPIO_Pin_1, 0);
-
-    //GPIO_WriteBit(GPIOA, GPIO_Pin_1, 0);
-
     //*********************
     //Read the uC unique ID
-    uint32_t idPart1 = STM32_UUID[0];
-    uint32_t idPart2 = STM32_UUID[1];
-    uint32_t idPart3 = STM32_UUID[2];
+    //uint32_t idPart1 = STM32_UUID[0];
+    //uint32_t idPart2 = STM32_UUID[1];
+    //uint32_t idPart3 = STM32_UUID[2];
 
-    // setup RFM69 and optional reset
+
+    //Setup RFM69 and optional reset
     RFM69_Struct rfm69;
     RFM69_chipUnselect();
     RFM69_reset(&rfm69);
 
-    //Test
-    uint32_t timeEntry = mstimer_get();
-    //uint16_t tempvalue = RFM69_readRegister(&rfm69, 0x5C);
-
-
     RFM69_init(&rfm69, true);
 
-    RFM69_setAESEncryption(&rfm69, 0, 0);
+    RFM69_setAESEncryption(&rfm69, "sdfgliunsergliuh", 16);
 
 
     // init RF module and put it to sleep
@@ -76,7 +68,10 @@ int main(void)
 
 
     // check if a packet has been received
-    char testdata[7] = {1, 1, 0, 0, 0};
+    char data[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+    data[0] = 1;            //Target Address
+    data[1] = RF_ADDRESS;      //Source Address
+    data[2] = 0;            //Control Byte
     uint16_t temperature;
     uint16_t humidity;
 
@@ -85,32 +80,36 @@ int main(void)
         read_sensor(&temperature, &humidity);
 
         //Pack the sensor reading into the RF packet
-        testdata[4] = temperature>>8;
-        testdata[5] = temperature && 0xFF;
-        testdata[6] = humidity>>8;
-        testdata[7] = humidity && 0xFF;
+        data[3] = temperature>>8;
+        data[4] = temperature && 0xFF;
+        data[5] = humidity>>8;
+        data[6] = humidity && 0xFF;
+        //data[7] = hall_status();
 
         //Wakeup and send a packet
         RFM69_setMode(&rfm69, RFM69_MODE_STANDBY);
-        RFM69_send(&rfm69, testdata, sizeof(testdata));
+        RFM69_send(&rfm69, data, sizeof(data));
 
         //Put the RF module to sleep
         RFM69_sleep(&rfm69);
 
-        GPIO_WriteBit(GPIOA, GPIO_Pin_1, !GPIO_ReadOutputDataBit(GPIOA, GPIO_Pin_1));
-
-        //simple_delay(50000);
-
-        //Put the uC to sleep
-        StandbyRTCMode();
+        //Put the uC to sleep - The RTC will reset the system when the alarm fires
+        //StandbyRTCMode();
 
         ///TODO: Clock still seems a little fast...
-        ///TODO: Wake up for hall sensor interrupt
+        ///TODO: Wake up for hall sensor interrupt - This won't work in Standby mode unless it's on a wakeup pin (PA0 - hint it's not :/)
 
 	}
     return(0);
 }
 
+//************************************
+//Return the status of the hall sensor
+uint8_t hall_status()
+{
+    //PB1
+    return(GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_1));
+}
 
 void clock_config(void)
 {
@@ -137,7 +136,7 @@ void RCC_Config(void)
 
 void GPIO_Config(void)
 {
-    //Enable clock for GPOIA
+    //Enable clock for GPIOA
     RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA, ENABLE);
 
     //****************************************
@@ -159,8 +158,85 @@ void GPIO_Config(void)
 
 	// apply configuration
 	GPIO_Init(LED_GPIO, &GPIO_Init_LED);
-}
 
+    //****************************************
+    //****************************************
+	//Enable clock for GPOIA
+    RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOB, ENABLE);
+
+    // gpio init struct
+	GPIO_InitTypeDef GPIO_Init_Sensor;
+
+    // initialize gpio structure
+	GPIO_StructInit(&GPIO_Init_Sensor);
+
+	// use pin 0
+	GPIO_Init_Sensor.GPIO_Pin = HALL_PIN;
+
+	// mode: output
+	GPIO_Init_Sensor.GPIO_Mode = GPIO_Mode_IN;
+
+	// output type: push-pull
+    GPIO_Init_Sensor.GPIO_OType = GPIO_OType_PP;
+
+    //no pull up resistor
+	GPIO_Init_Sensor.GPIO_PuPd = GPIO_PuPd_NOPULL;
+
+    //50MHz pin speed
+    GPIO_Init_Sensor.GPIO_Speed = GPIO_Speed_50MHz;
+
+	// apply configuration
+	GPIO_Init(HALL_GPIO, &GPIO_Init_Sensor);
+
+    //*******************
+    //*******************
+    //Setup the interrupt
+/*
+    //Variables
+    EXTI_InitTypeDef EXTI_InitStruct;
+    NVIC_InitTypeDef NVIC_InitStruct;
+
+	 // Tell system that you will use PB1 for EXTI_Line1
+    SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOB, EXTI_PinSource1);
+
+    // PD0 is connected to EXTI_Line0
+    EXTI_InitStruct.EXTI_Line = EXTI_Line1;
+    // Enable interrupt
+    EXTI_InitStruct.EXTI_LineCmd = ENABLE;
+    // Interrupt mode
+    EXTI_InitStruct.EXTI_Mode = EXTI_Mode_Interrupt;
+    // Triggers on rising and falling edge
+    EXTI_InitStruct.EXTI_Trigger = EXTI_Trigger_Rising;
+    // Add to EXTI
+    EXTI_Init(&EXTI_InitStruct);
+
+    // Add IRQ vector to NVIC
+    // PB1 is connected to EXTI_Line1, which has EXTI1_IRQn vector
+    NVIC_InitStruct.NVIC_IRQChannel = EXTI0_1_IRQn;
+    // Set priority
+    NVIC_InitStruct.NVIC_IRQChannelPriority = 0x00;
+    // Enable interrupt
+    NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
+    // Add to NVIC
+    NVIC_Init(&NVIC_InitStruct);
+*/
+}
+/*
+//Interrupt handler
+void EXTI0_1_IRQHandler(void)
+{
+    // Make sure that interrupt flag is set
+    if (EXTI_GetITStatus(EXTI_Line1) != RESET)
+    {
+        //Do your stuff when PB1 is changed
+        //Toggle the LED
+        GPIO_WriteBit(GPIOA, GPIO_Pin_1, !GPIO_ReadOutputDataBit(GPIOA, GPIO_Pin_1));
+
+        //Clear interrupt flag
+        EXTI_ClearITPendingBit(EXTI_Line1);
+    }
+}
+*/
 //***********************************************************
 // Configure the RTC peripheral by selecting the clock source
 //***********************************************************
@@ -239,8 +315,8 @@ void RTC_AlarmConfig(void)
 
     RTC_AlarmStructure.RTC_AlarmTime.RTC_H12 = RTC_TimeStruct.RTC_H12;
     RTC_AlarmStructure.RTC_AlarmTime.RTC_Hours = RTC_TimeStruct.RTC_Hours;
-    RTC_AlarmStructure.RTC_AlarmTime.RTC_Minutes = RTC_TimeStruct.RTC_Minutes;
-    RTC_AlarmStructure.RTC_AlarmTime.RTC_Seconds = RTC_TimeStruct.RTC_Seconds+10;
+    RTC_AlarmStructure.RTC_AlarmTime.RTC_Minutes = RTC_TimeStruct.RTC_Minutes+30;       //We want the alarm to trigger every 20 minutes
+    RTC_AlarmStructure.RTC_AlarmTime.RTC_Seconds = RTC_TimeStruct.RTC_Seconds;
 
     // Set the Alarm A
     RTC_AlarmStructure.RTC_AlarmDateWeekDay = RTC_DateStruct.RTC_WeekDay;
@@ -278,22 +354,18 @@ void IncrementRtcAlarmA(void)
     RTC_AlarmCmd(RTC_Alarm_A, ENABLE);
 }
 
-//************************************************************
-// This function handles RTC Alarm interrupt (A and B) request
+//*******************************************************************************************************************************************************
+// This function handles RTC Alarm interrupt (A and B) request - I don't think we ever actually get here from standby mode as that just resets the system
 void RTC_IRQHandler(void)
 {
-    uint32_t tmp =0;
-
-    //Toggle the LED
-    GPIO_WriteBit(GPIOA, GPIO_Pin_1, !GPIO_ReadOutputDataBit(GPIOA, GPIO_Pin_1));
+    //Clear wakeup flag
+    PWR_ClearFlag(PWR_FLAG_WU);
 
     // Check on the AlarmA flag
     if(RTC_GetITStatus(RTC_IT_ALRA) != RESET)
     {
         // Clear RTC AlarmA Flags
         RTC_ClearITPendingBit(RTC_IT_ALRA);
-
-        IncrementRtcAlarmA();
     }
 
     // Clear the EXTIL line 17

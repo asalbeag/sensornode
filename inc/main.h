@@ -10,7 +10,9 @@
 //The STM32 factory-programmed UUID memory address location
 #define STM32_UUID ((uint32_t *)0x1FFFF7AC)
 
-#define SENSOR_ADDRESS          0x80        //7-bit address
+#define SENSOR_ADDRESS          0x80        //7-bit I2C address
+
+#define RF_ADDRESS              2        //Made up NODE ID
 
 #define SPI_PERIPH              SPI1
 #define SPI_CLK                 RCC_APB2Periph_SPI1
@@ -34,6 +36,10 @@
 #define LED_GPIO_CLK            RCC_AHBPeriph_GPIOA
 #define LED_PIN                 GPIO_Pin_1
 
+#define HALL_GPIO                GPIOB
+#define HALL_GPIO_CLK            RCC_AHBPeriph_GPIOB
+#define HALL_PIN                 GPIO_Pin_1
+
 //*********
 //Functions
 //*********
@@ -44,6 +50,8 @@ void GPIO_Config(void);
 void RTC_Config(void);
 void RTC_AlarmConfig(void);
 void StandbyRTCMode(void);
+uint8_t hall_status(void);
+void EXTI0_1_IRQHandler(void);
 
 //i2c.c
 void I2C_Config(void);

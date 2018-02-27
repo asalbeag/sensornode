@@ -70,7 +70,7 @@ static const uint8_t rfm69_base_config[][2] =
     {0x37, 0xD0}, // RegPacketConfig1: Variable length, CRC off, whitening
     {0x38, 0x40}, // RegPayloadLength: 64 bytes max payload
     {0x3C, 0x8F}, // RegFifoThresh: TxStart on FifoNotEmpty, 2 bytes FifoLevel
-    {0x3D, 0x12},
+    {0x3D, 0x13}, //AES on
     {0x5A, 0x5D}, // PA Settings
     {0x5C, 0x7C}, // PA Settings
     {0x58, 0x1B}, // RegTestLna: Normal sensitivity mode
@@ -526,8 +526,7 @@ int RFM69_send(RFM69_Struct* rfm69, const void* data, unsigned int dataLength)
       // wait for a random time before checking again
       delay_ms(rand() % 10);
 
-      /* try to receive packets while waiting for a free channel
-       * and put them into a temporary buffer */
+      // try to receive packets while waiting for a free channel and put them into a temporary buffer
       int bytesRead;
       if ((bytesRead = RFM69_receive(rfm69, rfm69->rxBuffer, RFM69_MAX_PAYLOAD)) > 0)
       {
@@ -551,13 +550,17 @@ int RFM69_send(RFM69_Struct* rfm69, const void* data, unsigned int dataLength)
   // address FIFO
   SPI_write_byte(0x00 | 0x80);
 
+    //Full Packet:
+    //Payload length Byte, TargetID Byte, SourceID Byte, CTL Byte, Data Bytes
+
   // send length byte
   SPI_write_byte(dataLength);
 
-   //These should be added and the datalength should be changed accordingly
+   //These should be added and the datalength should be changed accordingly - They are hardcoded into the data array for now
   //SPI_transfer_byte(destination);
   //SPI_transfer_byte(source);
   //SPI_transfer_byte(control);
+
 
   // send payload
   for (unsigned int i = 0; i < dataLength; i++)
